@@ -1,0 +1,13 @@
+accessWidener v1 named
+# Useful for hiding slots
+mutable field net/minecraft/screen/slot/Slot y I
+# Used for updating revision on our own terms
+accessible field net/minecraft/screen/ScreenHandler revision I
+# Used for Tooltips.ofItemStack
+accessible method net/minecraft/client/gui/screen/Screen renderTooltip (Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/item/ItemStack;II)V
+# Useful for rendering utils
+accessible field net/minecraft/client/gui/screen/ingame/HandledScreen x I
+accessible field net/minecraft/client/gui/screen/ingame/HandledScreen y I
+accessible field net/minecraft/client/gui/screen/ingame/HandledScreen backgroundWidth I
+accessible field net/minecraft/client/gui/screen/ingame/HandledScreen backgroundHeight I
+accessible field net/minecraft/client/gui/DrawableHelper zOffset I

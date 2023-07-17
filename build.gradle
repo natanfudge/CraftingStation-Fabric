@@ -1,0 +1,97 @@
+plugins {
+	alias (libs.plugins.loom)
+	alias(libs.plugins.kotlin)
+	alias(libs.plugins.loom.vineflower)
+	alias(libs.plugins.kotlin.serialization)
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	maven { url "https://maven.shedaniel.me" }
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+	mods {
+		"crafting_station" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+	accessWidenerPath = file("src/main/resources/crafting_station.accessWidener")
+
+}
+def reiVersion = "9.1.619"
+dependencies {
+	//to change the versions see the gradle.properties file
+	minecraft libs.minecraft
+	mappings "net.fabricmc:yarn:${libs.versions.yarn.mappings.get()}:v2"
+	modImplementation libs.fabric.loader
+	modImplementation libs.flk
+	testImplementation libs.kotlin.test
+	modImplementation "io.github.natanfudge:kotlinx-serialization-minecraft:1.0.1+1.19.2"
+	modImplementation libs.fabric.api
+	modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-fabric:${reiVersion}"
+	modRuntimeOnly "me.shedaniel:RoughlyEnoughItems-fabric:${reiVersion}"
+}
+
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 17
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+	kotlinOptions {
+		jvmTarget = 17
+		freeCompilerArgs = freeCompilerArgs + "-Xcontext-receivers"
+	}
+}
+
+java {
+	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+	// if it is present.
+	// If you remove this line, sources will not be generated.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archivesBaseName}"}
+	}
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}
