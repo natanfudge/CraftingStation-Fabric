@@ -29,7 +29,7 @@ loom {
 	accessWidenerPath = file("src/main/resources/crafting_station.accessWidener")
 
 }
-def reiVersion = "9.1.619"
+def reiVersion = "9.1.632"
 dependencies {
 	//to change the versions see the gradle.properties file
 	minecraft libs.minecraft
@@ -40,7 +40,14 @@ dependencies {
 	modImplementation "io.github.natanfudge:kotlinx-serialization-minecraft:1.0.1+1.19.2"
 	modImplementation libs.fabric.api
 	modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-fabric:${reiVersion}"
-	modRuntimeOnly "me.shedaniel:RoughlyEnoughItems-fabric:${reiVersion}"
+	modRuntimeOnly ("me.shedaniel:RoughlyEnoughItems-fabric:${reiVersion}")
+	modRuntimeOnly "dev.architectury:architectury-fabric:6.5.85"
+	modCompileOnly "me.shedaniel:RoughlyEnoughItems-default-plugin-fabric:${reiVersion}"
+
+}
+
+configurations {
+	modRuntimeOnly.exclude group: 'net.fabricmc', module: 'fabric-loader'
 }
 
 

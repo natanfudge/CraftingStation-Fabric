@@ -12,6 +12,7 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.fluid.FluidState
 import net.minecraft.fluid.Fluids
 import net.minecraft.inventory.Inventory
+import net.minecraft.item.BlockItem
 import net.minecraft.item.Item
 import net.minecraft.item.ItemPlacementContext
 import net.minecraft.screen.NamedScreenHandlerFactory
@@ -69,6 +70,7 @@ abstract class KBlock(
     }
 
     val id = csId(id)
+    val item = BlockItem(this, itemSettings)
 
     //////////// Inventory implementation /////////
 

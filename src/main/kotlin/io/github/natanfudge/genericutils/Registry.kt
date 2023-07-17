@@ -12,7 +12,7 @@ import net.minecraft.util.registry.Registry
 context(CommonInit)
 fun register(block: KBlock) = with(block) {
     Registry.register(Registry.BLOCK, id, this)
-    if (itemSettings != null) Registry.register(Registry.ITEM, id, BlockItem(this, itemSettings))
+    if (itemSettings != null) Registry.register(Registry.ITEM, id, block.item)
     if (this is KBlockEntityProvider) Registry.register(Registry.BLOCK_ENTITY_TYPE, id, blockEntityType)
 }
 context(CommonInit)
