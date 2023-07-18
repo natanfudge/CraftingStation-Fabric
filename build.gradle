@@ -15,6 +15,11 @@ base {
 
 repositories {
 	maven { url "https://maven.shedaniel.me" }
+	maven {
+		// location of the maven that hosts JEI files since January 2023
+		name = "Jared's maven"
+		url = "https://maven.blamejared.com/"
+	}
 }
 
 loom {
@@ -30,6 +35,8 @@ loom {
 
 }
 def reiVersion = "9.1.632"
+def mcVersion = libs.versions.minecraft.get()
+def jeiVersion = "11.6.0.1016"
 dependencies {
 	//to change the versions see the gradle.properties file
 	minecraft libs.minecraft
@@ -39,10 +46,14 @@ dependencies {
 	testImplementation libs.kotlin.test
 	modImplementation "io.github.natanfudge:kotlinx-serialization-minecraft:1.0.1+1.19.2"
 	modImplementation libs.fabric.api
-	modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-fabric:${reiVersion}"
-	modRuntimeOnly ("me.shedaniel:RoughlyEnoughItems-fabric:${reiVersion}")
-	modRuntimeOnly "dev.architectury:architectury-fabric:6.5.85"
-	modCompileOnly "me.shedaniel:RoughlyEnoughItems-default-plugin-fabric:${reiVersion}"
+	modCompileOnlyApi("mezz.jei:jei-${mcVersion}-common-api:${jeiVersion}")
+	modCompileOnlyApi("mezz.jei:jei-${mcVersion}-fabric-api:${jeiVersion}")
+	// at runtime, use the full JEI jar for Fabric
+	modRuntimeOnly("mezz.jei:jei-${mcVersion}-fabric:${jeiVersion}")
+//	modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-fabric:${reiVersion}"
+//	modRuntimeOnly ("me.shedaniel:RoughlyEnoughItems-fabric:${reiVersion}")
+//	modRuntimeOnly "dev.architectury:architectury-fabric:6.5.85"
+//	modCompileOnly "me.shedaniel:RoughlyEnoughItems-default-plugin-fabric:${reiVersion}"
 
 }
 

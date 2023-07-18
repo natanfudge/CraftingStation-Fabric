@@ -1,8 +1,0 @@
-{
-  "parent": "block/slab",
-  "textures": {
-    "bottom": "block/oak_planks",
-    "top": "craftingstation:block/top",
-    "side": "craftingstation:block/slab_side"
-  }
-}

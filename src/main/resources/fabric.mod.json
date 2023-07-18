@@ -26,9 +26,6 @@
 				"value": "io.github.natanfudge.CraftingStationClient",
 				"adapter": "kotlin"
 			}
-		],
-		"rei_client" : [
-			"io.github.natanfudge.rei.CraftingStationReiPlugin"
 		]
 	},
 	"mixins": [

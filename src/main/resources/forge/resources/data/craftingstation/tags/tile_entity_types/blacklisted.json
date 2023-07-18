@@ -1,9 +1,0 @@
-{
-  "replace": false,
-  "values": [
-    {
-      "id": "create:item_vault",
-      "required": false
-    }
-  ]
-}
