@@ -1,12 +1,14 @@
 package io.github.natanfudge.utils.inventory
 
 import io.github.natanfudge.genericutils.inventory.*
+import io.github.natanfudge.genericutils.superclasses.KRecipeScreenHandler
 import io.github.natanfudge.genericutils.superclasses.KScreenHandler
 import io.github.natanfudge.injection.ImmutableItemStack
+import net.minecraft.inventory.Inventory
 import net.minecraft.screen.slot.Slot
 import kotlin.math.min
 
-class CombinedSlotsBuilder(private val handler: KScreenHandler) {
+class CombinedSlotsBuilder<I: Inventory>(private val handler: KRecipeScreenHandler<I>) {
     private val partMap = mutableMapOf<InventoryPart, List<InventoryPart>>()
     fun parts(vararg slots: List<Slot>): List<InventoryPart> {
         return slots.map { InventoryPart(it) }
@@ -16,13 +18,13 @@ class CombinedSlotsBuilder(private val handler: KScreenHandler) {
         partMap[this] = other.toList()
     }
 
-    fun build(): CombinedSlots {
+    fun build(): CombinedSlots<I> {
         return CombinedSlots(handler, partMap.keys.toList(), partMap)
     }
 }
 
-class CombinedSlots internal constructor(
-    private val handler: KScreenHandler, @PublishedApi internal val parts: List<InventoryPart>,
+class CombinedSlots<I : Inventory> internal constructor(
+    private val handler: KRecipeScreenHandler<I>, @PublishedApi internal val parts: List<InventoryPart>,
     /**
      * When shift-clicking on an item in an inventory part, it will only move to values specified as the value,
      * and in the order specified in the list.
@@ -30,7 +32,7 @@ class CombinedSlots internal constructor(
     private val allowedMovements: Map<InventoryPart, List<InventoryPart>>
 ) {
     companion object {
-        fun of(handler: KScreenHandler, builder: CombinedSlotsBuilder.() -> Unit) = CombinedSlotsBuilder(handler).apply(builder).build()
+        fun<I: Inventory> of(handler: KRecipeScreenHandler<I>, builder: CombinedSlotsBuilder<I>.() -> Unit) = CombinedSlotsBuilder(handler).apply(builder).build()
     }
 
     val size = parts.sumOf { it.slots.size }
@@ -57,15 +59,17 @@ class CombinedSlots internal constructor(
     }
 
 
-
-    fun insert(itemStack: ImmutableItemStack, startIndex: Int, endIndex: Int): ImmutableItemStack {
+    /**
+     * Returns how many of [itemStack] are left.
+     */
+    fun insert(itemStack: ImmutableItemStack, startIndex: Int, endIndex: Int): Int {
         return mergeAndThenSpreadStacks(stackInventoryPart = null, stack = itemStack, startIndex = startIndex, endIndex = endIndex)
     }
 
     /**
-     * Return [slotStack] after its contents have been transferred
+     * Returns how many of [slotStack] are left.
      */
-    fun quickTransfer(index: Int, slotStack: ImmutableItemStack): ImmutableItemStack {
+    fun quickTransfer(index: Int, slotStack: ImmutableItemStack): Int {
         val inventoryPart = getInventoryPart(index)
         return mergeAndThenSpreadStacks(inventoryPart, slotStack, startIndex = 0, endIndex = size - 1)
     }
@@ -75,25 +79,26 @@ class CombinedSlots internal constructor(
         stack: ImmutableItemStack,
         startIndex: Int,
         endIndex: Int
-    ): ImmutableItemStack {
+    ): Int {
         // Prioritize merging over moving into an empty slot
-        val afterMerge = spreadStacks(stackInventoryPart, stack, mergeOnly = true, startIndex = startIndex, endIndex = endIndex)
-        return spreadStacks(stackInventoryPart, afterMerge, mergeOnly = false, startIndex = startIndex, endIndex = endIndex)
+        val afterMerge = spreadStacks(stackInventoryPart, stack, amountLeft = stack.count, mergeOnly = true, startIndex = startIndex, endIndex = endIndex)
+        return spreadStacks(stackInventoryPart, stack, amountLeft = afterMerge, mergeOnly = false, startIndex = startIndex, endIndex = endIndex)
     }
 
     private fun spreadStacks(
         stackInventoryPart: InventoryPart?,
         stackToSpread: ImmutableItemStack,
+        amountLeft: Int,
         mergeOnly: Boolean,
         startIndex: Int,
         endIndex: Int
-    ): ImmutableItemStack {
-        var remainingCount = stackToSpread.count
+    ): Int {
+        var remainingCount = amountLeft
         forEachSlotPartMovesTo(stackInventoryPart) { slot, i ->
             remainingCount -= trySlot(stackToSpread, remainingCount, slot, i, startIndex, endIndex, mergeOnly)
-            if (remainingCount == 0) return stackToSpread.withCount(remainingCount)
+            if (remainingCount == 0) return 0
         }
-        return stackToSpread.withCount(remainingCount)
+        return remainingCount
     }
 
     private inline fun forEachSlotPartMovesTo(part: InventoryPart?, action: (Slot, i: Int) -> Unit) {
@@ -140,7 +145,7 @@ class CombinedSlots internal constructor(
         val slotChanged = resultAmountInSlot != slotStack.count
         if (previousAmountInSlot == 0) {
             // Nothing in the slot - put in a new stack
-            slot.stack = stackToSpread.withCount(resultAmountInSlot).copyToMutable()
+            slot.stack = stackToSpread.copyWithCount(resultAmountInSlot)
         } else {
             // There is already a stack in the slot - increase its count
             slotStack.count = resultAmountInSlot

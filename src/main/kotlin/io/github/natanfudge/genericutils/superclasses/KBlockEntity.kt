@@ -24,13 +24,14 @@ abstract class KBlockEntity(
     }
 
     override fun toUpdatePacket(): Packet<ClientPlayPacketListener>? {
-        return if(type.clientRequiresNbt) return BlockEntityUpdateS2CPacket.create(this) else super.toUpdatePacket()
+        return if (type.clientRequiresNbt) return BlockEntityUpdateS2CPacket.create(this) else super.toUpdatePacket()
     }
 
+    private val inventoryOnChangeHandle = inventory?.onChange("KBlockEntity") { markDirty() }
 
-    ///// Inventory implementation
-    init {
-        inventory?.onChange { markDirty() }
+    override fun markRemoved() {
+        super.markRemoved()
+        inventoryOnChangeHandle?.unsubscribe()
     }
 
     override fun writeNbt(nbt: NbtCompound) {
@@ -42,7 +43,6 @@ abstract class KBlockEntity(
         inventory?.readItemsNbt(nbt)
         super.readNbt(nbt)
     }
-
 
 
 }

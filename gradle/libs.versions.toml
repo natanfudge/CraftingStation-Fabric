@@ -22,6 +22,7 @@ yarn_mappings = "1.19.2+build.28"
 fabric_loader = "0.14.21"
 flk = "1.10.0+kotlin.1.9.0"
 fabric_api = "0.76.0+1.19.2"
+kotlin_serialization_minecraft = "1.0.1+1.19.2"
 
 [libraries]
 
@@ -30,3 +31,4 @@ fabric_loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric_l
 flk = {module = "net.fabricmc:fabric-language-kotlin", version.ref = "flk"}
 kotlin_test = {module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin"}
 fabric_api = {module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fabric_api"}
+kotlin_serialization_minecraft = {module = "io.github.natanfudge:kotlinx-serialization-minecraft", version.ref = "kotlin_serialization_minecraft"}

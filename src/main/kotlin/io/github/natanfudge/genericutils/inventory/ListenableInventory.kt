@@ -1,38 +1,48 @@
 package io.github.natanfudge.genericutils.inventory
 
-import io.github.natanfudge.genericutils.forEachNonEmptyStackIndexed
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.inventory.Inventories
 import net.minecraft.inventory.Inventory
+import net.minecraft.inventory.SidedInventory
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtList
-import net.minecraft.util.collection.DefaultedList
 
+/**
+ * This should only be used when the inventory is created. You can't just copyToListenable() wherever you want and expect listening to changes to work.
+ */
+fun Inventory.asListenable(): ListenableInventory = ListenableInventoryImpl(this)
+fun SidedInventory.asListenable(): ListenableSidedInventory = ListenableSidedInventoryImpl(this)
+
+
+class ListenableSidedInventoryImpl(private val inventory: SidedInventory, private val listenable: Listenable = inventory.asListenable()) :
+    ListenableSidedInventory, SidedInventory by inventory, Listenable by listenable
+
+interface ListenableInventory : Inventory, Listenable
+interface ListenableSidedInventory : SidedInventory, ListenableInventory
+
+interface Listenable {
+    fun onChange(listenerId: String, listener: () -> Unit): SubscriptionHandle
+    fun unsubscribe(listenerId: String)
+}
 
 /**
  * Use [FixedSlotInventory] to implement this (more implementations to come)
  */
-interface ListenableInventory : Inventory {
-    fun onChange(listener: () -> Unit)
-}
-
-
-/**
- * Easy ListenableInventory implementation
- */
-class FixedSlotInventory(slots: Int) : ListenableInventory {
-    private val inventory = DefaultedList.ofSize(slots, ItemStack.EMPTY)
-
+class ListenableInventoryImpl(private val inventory: Inventory) : Inventory by inventory, ListenableInventory {
     // Providing it as a constructor parameter is not useful since the target BlockEntity is not available when the inventory is created
-    private var onChange: MutableList<() -> Unit> = mutableListOf()
+    private var onChange: MutableMap<String, () -> Unit> = mutableMapOf()
 
-    override fun onChange(listener: () -> Unit) {
-        onChange.add(listener)
+    /**
+     * Returns a SubscriptionHandle that must call unsubscribe() when this onChange callback is no longer required.
+     * You may also opt to not use the SubscriptionHandle and just call unsubscribe() with the same ID.
+     */
+    override fun onChange(listenerId: String, listener: () -> Unit): SubscriptionHandle {
+        onChange[listenerId] = listener
+        return SubscriptionHandle(this, listenerId)
     }
 
-    private fun notifyListeners() = onChange.forEach {it()}
+    override fun unsubscribe(listenerId: String) {
+        onChange.remove(listenerId)
+    }
+
+    private fun notifyListeners() = onChange.forEach { it.value() }
 
     private inline fun trackRemovalChange(changingCode: () -> ItemStack): ItemStack {
         val removed = changingCode()
@@ -41,77 +51,29 @@ class FixedSlotInventory(slots: Int) : ListenableInventory {
     }
 
     override fun clear() {
-        val sizeBefore = inventory.size
+        val sizeBefore = size()
         inventory.clear()
         if (sizeBefore > 0) notifyListeners()
     }
 
-    override fun size(): Int {
-        return inventory.size
-    }
-
-    override fun isEmpty(): Boolean {
-        for (i in 0 until size()) {
-            val stack = getStack(i)
-            if (!stack.isEmpty) {
-                return false
-            }
-        }
-        return true
-    }
-
-    override fun getStack(slot: Int): ItemStack {
-        return inventory[slot]
-    }
-
     override fun removeStack(slot: Int, amount: Int): ItemStack = trackRemovalChange {
-         Inventories.splitStack(inventory, slot, amount)
+        inventory.removeStack(slot, amount)
     }
 
     override fun removeStack(slot: Int): ItemStack = trackRemovalChange {
-         Inventories.removeStack(inventory, slot);
+        inventory.removeStack(slot)
     }
 
     override fun setStack(slot: Int, stack: ItemStack) {
-        val old = inventory[slot]
-        inventory[slot] = stack;
-        if (stack.count > stack.maxCount) {
-            stack.count = stack.maxCount;
-        }
+        val old = inventory.getStack(slot)
+        inventory.setStack(slot, stack)
         if (!ItemStack.areEqual(old, stack)) notifyListeners()
     }
-
-    override fun markDirty() {
-    }
-
-    override fun canPlayerUse(player: PlayerEntity?): Boolean {
-        return true
-    }
-
 }
 
-private const val ItemStackListSlotKey = "Slot"
-private const val ItemStackListKey = "Items"
 
-fun Inventory.writeItemsNbt(nbt: NbtCompound) {
-    val nbtList = NbtList()
-    forEachNonEmptyStackIndexed { i, stack ->
-        val compound = NbtCompound()
-        compound.putByte(ItemStackListSlotKey, i.toByte())
-        stack.writeNbt(compound)
-        nbtList.add(compound)
-    }
-    nbt.put(ItemStackListKey, nbtList)
+class SubscriptionHandle(private val inventory: Listenable, private val id: String) {
+    fun unsubscribe() = inventory.unsubscribe(id)
 }
 
-fun Inventory.readItemsNbt(nbt: NbtCompound) {
-    val nbtList = nbt.getList(ItemStackListKey, NbtElement.COMPOUND_TYPE.toInt())
 
-    for (i in nbtList.indices) {
-        val nbtCompound = nbtList.getCompound(i)
-        val j = nbtCompound.getByte(ItemStackListSlotKey).toInt() and 255
-        if (j >= 0 && j < size()) {
-            setStack(j, ItemStack.fromNbt(nbtCompound))
-        }
-    }
-}

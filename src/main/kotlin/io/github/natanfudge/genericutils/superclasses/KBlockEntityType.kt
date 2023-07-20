@@ -6,7 +6,6 @@ import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.util.math.BlockPos
 
-//TODO: cleanup and doc this
 
 /**
  * Make sure that the BlockEntityType is unique per block
@@ -18,8 +17,7 @@ class KBlockEntityType<T : BlockEntity>(
      * Set to true if the BlockEntity displays something that requires its data that needs to be seen when looking at the block
      */
     val clientRequiresNbt: Boolean
-) :
-    BlockEntityType<T>(factory, blocks, null), KBlockEntityProvider
+) : BlockEntityType<T>(factory, blocks, null), KBlockEntityProvider
 {
 
     override val blockEntityType: BlockEntityType<*>

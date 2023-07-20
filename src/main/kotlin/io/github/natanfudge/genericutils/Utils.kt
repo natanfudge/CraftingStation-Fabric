@@ -57,7 +57,7 @@ fun BlockState.toItemStack() = ItemStack(block)
 fun CraftingResultInventory.setStack(stack: ItemStack) = setStack(0, stack)
 
 inline fun World.inServer(action: context(ServerWorld)() -> Unit) {
-    if(isServer) action(this as ServerWorld)
+    if (isServer) action(this as ServerWorld)
 }
 
 fun String.truncate(truncate: Int) = if (length > truncate) {
@@ -68,3 +68,10 @@ inline fun Int.inBounds(start: Int, end: Int) = this >= start && this <= end
 inline fun Double.inBounds(start: Int, end: Int) = this >= start && this <= end
 inline fun Double.inBoundsExclusive(start: Int, end: Int) = this > start && this < end
 
+fun <T> buildHashset(size: Int, builder: (Int) -> T): HashSet<T> {
+    val set = hashSetOf<T>()
+    repeat(size) {
+        set.add(builder(it))
+    }
+    return set
+}

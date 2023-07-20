@@ -13,12 +13,18 @@ import net.minecraft.screen.ScreenHandler
 //  4. Being able to switch between different adjacent inventories together with another player
 
 
-/**Usually, CraftingInventory's only emulate an inventory for the purpose of GUIs. Here, we want the  CraftingInventory to store its stuff in a real Inventory.**/
+/**
+ * Usually, CraftingInventory's only emulate an inventory for the purpose of GUIs. Here, we want the  CraftingInventory to store its stuff in a real Inventory.
+ * MUST BE CLOSED! Call onClose when the screen using this is closed.
+ * **/
 class InventoryBackedCraftingInventory(private val eventHandler: ScreenHandler, private val inv: ListenableInventory) :
     CraftingInventory(eventHandler, 3, 3) {
 
-    init {
-        inv.onChange { eventHandler.onContentChanged(this); }
+    private val contentChangedHandle = inv.onChange("InventoryBackedCraftingInventory") { eventHandler.onContentChanged(this) }
+
+    override fun onClose(player: PlayerEntity?) {
+        super.onClose(player)
+        contentChangedHandle.unsubscribe()
     }
 
 

@@ -13,9 +13,7 @@ object Packets {
         ClearScreen.register { _, player, _, _, _ ->
             val container = player.currentScreenHandler;
             if (container is CraftingStationScreenHandler) {
-                repeat(9) {
-                    container.transferSlot(player, it + 1)
-                }
+                container.clearCraftingSlots()
             }
         }
     }

@@ -1,9 +1,12 @@
 package io.github.natanfudge
 
 import io.github.natanfudge.genericutils.*
-import io.github.natanfudge.genericutils.superclasses.KScreenHandler
+import io.github.natanfudge.genericutils.superclasses.KRecipeScreenHandler
 import io.github.natanfudge.injection.ImmutableItemStack
-import io.github.natanfudge.utils.inventory.*
+import io.github.natanfudge.utils.inventory.CombinedSlots
+import io.github.natanfudge.utils.inventory.HideableSlot
+import io.github.natanfudge.utils.inventory.ManagedInventory
+import io.github.natanfudge.utils.inventory.MultiInventoryManager
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.entity.player.PlayerInventory
@@ -12,7 +15,9 @@ import net.minecraft.inventory.CraftingResultInventory
 import net.minecraft.inventory.Inventory
 import net.minecraft.item.ItemStack
 import net.minecraft.recipe.Recipe
+import net.minecraft.recipe.RecipeMatcher
 import net.minecraft.recipe.RecipeType
+import net.minecraft.recipe.book.RecipeBookCategory
 import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.screen.ScreenHandlerType
 import net.minecraft.screen.slot.CraftingResultSlot
@@ -27,7 +32,7 @@ class CraftingStationScreenHandler(
     id: Int,
     inv: PlayerInventory,
     craftingStationPos: BlockPos,
-) : KScreenHandler(Type, id) {
+) : KRecipeScreenHandler<InventoryBackedCraftingInventory>(Type, id) {
     companion object {
         val Type: ScreenHandlerType<CraftingStationScreenHandler> = ExtendedScreenHandlerType { syncId, playerInventory, buf ->
             CraftingStationScreenHandler(syncId, playerInventory, buf.readBlockPos()/*, ArrayPropertyDelegate(1)*/)
@@ -38,8 +43,8 @@ class CraftingStationScreenHandler(
     private val player = inv.player
     private val world: World = player.world
     private val blockEntity: CraftingStationBlockEntity = inv.player.world.getSpecificBlockEntity(craftingStationPos)
-    private val inputInventory = InventoryBackedCraftingInventory(this, blockEntity)
-    private val outputInventory = CraftingResultInventory()
+    private val inputInventory = InventoryBackedCraftingInventory(this, blockEntity.inventory)
+    private val outputInventory = blockEntity.resultInventory
     private val combinedSlots = buildCombinedSlots()
 
     private var lastRecipe: Recipe<CraftingInventory>? = null
@@ -71,7 +76,7 @@ class CraftingStationScreenHandler(
     val selectedAdjacentInventoryRows: Int
         get() = adjacentInventories.selected?.rows ?: 0
 
-    override fun onContentChanged(inventory: Inventory) {
+    override fun onContentChanged(inventory: Inventory?) {
         updateResult()
     }
 
@@ -79,17 +84,46 @@ class CraftingStationScreenHandler(
         return true
     }
 
-    override fun transferSlotImmutable(player: PlayerEntity, index: Int, slotStack: ImmutableItemStack): ImmutableItemStack {
+    override fun populateRecipeFinder(finder: RecipeMatcher) {
+        return inputInventory.provideRecipeInputs(finder)
+    }
+
+    override fun clearCraftingSlots() {
+        repeat(9) {
+            transferSlot(player, it + 1)
+        }
+    }
+
+    override fun getCraftingResultSlotIndex(): Int  = 0
+
+    override fun getCraftingWidth(): Int  = inputInventory.width
+
+    override fun getCraftingHeight(): Int  = inputInventory.height
+
+    override fun getCraftingSlotCount(): Int  = 10
+
+    override fun getCategory(): RecipeBookCategory = RecipeBookCategory.CRAFTING
+
+    override fun matches(recipe: Recipe<in InventoryBackedCraftingInventory>): Boolean =  recipe.matches(inputInventory, player.world)
+
+    override fun canInsertIntoSlot(index: Int): Boolean = index != this.craftingResultSlotIndex
+
+    override fun transferSlotImmutable(player: PlayerEntity, index: Int, slotStack: ImmutableItemStack): Int {
         return combinedSlots.quickTransfer(index, slotStack)
     }
 
-    override fun insertItemImmutable(stack: ImmutableItemStack, startIndex: Int, endIndex: Int, fromLast: Boolean): ImmutableItemStack {
+    override fun insertItemImmutable(stack: ImmutableItemStack, startIndex: Int, endIndex: Int, fromLast: Boolean): Int {
         // We don't care about fromLast because no one calls insertItem on other screenHandlers anyway...
         return combinedSlots.insert(stack, startIndex, endIndex)
     }
 
     override fun canInsertIntoSlot(stack: ItemStack, slot: Slot): Boolean {
         return slot.inventory !== outputInventory && super.canInsertIntoSlot(stack, slot)
+    }
+
+    override fun close(player: PlayerEntity) {
+        super.close(player)
+        inputInventory.onClose(player)
     }
 
     private fun manageAdjacentInventories(craftingStationPos: BlockPos, playerInventory: PlayerInventory): MultiInventoryManager {
